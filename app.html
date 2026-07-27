@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-c="dark" data-d="desktop" data-g="p">
+<html lang="en" data-c="dark" data-d="desktop" data-g="all">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -429,8 +429,8 @@ body{padding-bottom:120px}
       </div>
     </div>
     <div class="groups" id="groups">
-      <button data-g="all">All</button>
-      <button data-g="p" class="on">Personal</button>
+      <button data-g="all" class="on">All</button>
+      <button data-g="p">Personal</button>
       <button data-g="t">Team</button>
       <button data-g="a">Activity</button>
       <span class="spacer"></span>
@@ -596,7 +596,7 @@ const SCREENS=[
  ["saved",   "Done for the week",   "<b>That is it.</b> You see what you moved and when the next one is due. We text you the night before so nobody has to chase you."],
  ["board",   "Where it lands",      "<b>This is what your leader opens before the call.</b> Everybody on one screen. You only ever see your own numbers \u2014 this board is his side, and it is the reason nobody reads figures out loud any more."],
 ];
-let si=0, grp="p", bstate="normal", ustate="return", lstate="found", sortKey="name", sortDir=1;
+let si=0, grp="all", bstate="normal", ustate="return", lstate="found", sortKey="name", sortDir=1;
 
 /* ---------- data ----------
    Only people who actually joined are here. Somebody who never opened the link is
