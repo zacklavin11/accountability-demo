@@ -216,6 +216,16 @@ table.mini-t .nm{font-size:16px}
 .landing .fine{font-size:13px; color:var(--ink3); line-height:1.7; margin-top:18px; text-align:center}
 .bigcheck{font-size:44px; color:var(--good); margin-bottom:14px}
 
+/* ---------- the text message they get ---------- */
+.thread{text-align:left; max-width:420px; margin:0 auto}
+.thread .who{font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink3);
+  margin-bottom:12px; text-align:center}
+.thread .bub{background:var(--surface); border:1px solid var(--rule); border-radius:20px 20px 20px 6px;
+  padding:15px 19px; font-size:16px; line-height:1.6; color:var(--ink); margin-bottom:10px; max-width:88%}
+.thread .bub.link{color:var(--accent); word-break:break-all}
+.thread .stamp{font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3);
+  margin-top:4px}
+
 /* ---------- steps ---------- */
 .steps{display:flex; gap:6px; margin:0 0 22px; font-size:11.5px; letter-spacing:.12em;
   text-transform:uppercase; font-weight:700; color:var(--ink3); flex-wrap:wrap}
@@ -336,19 +346,22 @@ body{padding-bottom:120px}
   <!-- ============ 0. COVER ============ -->
   <section id="s-cover" class="screen">
     <div class="cover">
-      <div class="kick">A walkthrough · seven screens</div>
-      <h1>Everybody&rsquo;s numbers,<br>on one board, before the call.</h1>
-      <p>Nobody reads them out. Nobody chases anybody the night before. You open one
-      screen and the whole team is on it &mdash; including who did not report.</p>
+      <div class="kick">Here is what you are going to get</div>
+      <h1>A text with a link.<br>Then two minutes a week.</h1>
+      <p>No app to download. No password to make up. No spreadsheet to find. You get a
+      link, you put your numbers in, and everybody&rsquo;s numbers are on one board
+      before the call starts.</p>
       <ol>
-        <li><b>You set the room up once.</b> A name and a deadline. Two minutes.</li>
-        <li><b>You get one link.</b> Text it to the group. That is the whole invite.</li>
-        <li><b>They fill in their numbers each week.</b> Twelve boxes, last week&rsquo;s
-        figures already sitting beside them.</li>
+        <li><b>You get the link in the group text.</b> Tap it, type your email, and you
+        are in.</li>
+        <li><b>You fill in who you are once.</b> Name, rep number, level, phone. You
+        never see that screen again.</li>
+        <li><b>Every week you type your numbers.</b> Last week&rsquo;s figures are
+        already sitting there. Two minutes.</li>
       </ol>
-      <p class="fineprint">Everything you are about to see is a working picture, not the
-      finished product &mdash; the names and numbers are made up. Tap <b>Next</b> to walk
-      through it, or use the dots to jump.</p>
+      <p class="fineprint">This is a working picture, not the finished product &mdash; the
+      names and numbers are made up. Tap <b>Next</b> to walk through it, or use the dots
+      to jump.</p>
     </div>
   </section>
   <!-- ============ 2. ADMIN · NEW ROOM ============ -->
@@ -428,6 +441,21 @@ body{padding-bottom:120px}
       whatever you sort by. The small number underneath is the change since last week.</div>
   </section>
 
+  <!-- ============ MEMBER · THE TEXT THEY GET ============ -->
+  <section id="s-text" class="screen" style="display:none">
+    <div class="landing">
+      <div class="mark">» The group text</div>
+      <div class="thread">
+        <div class="who">John Lavin</div>
+        <div class="bub">Tuesday call numbers go here from now on. Tap this once and
+          you&rsquo;re set — takes about two minutes.</div>
+        <div class="bub link" data-go="join" style="cursor:pointer">firc.app/join/tuesday-rvp-4K2P9</div>
+        <div class="stamp">Delivered</div>
+      </div>
+      <p class="fine" style="margin-top:26px">That link is the whole invite. Tap it.</p>
+    </div>
+  </section>
+
   <!-- ============ 5. MEMBER · INVITE LANDING ============ -->
   <section id="s-join" class="screen" style="display:none">
     <div class="landing">
@@ -437,12 +465,28 @@ body{padding-bottom:120px}
       <div class="card">
         <label style="display:block; font-size:14px; color:var(--ink2); margin-bottom:9px; letter-spacing:.04em">Your email</label>
         <input type="text" placeholder="you@example.com">
-        <button class="primary" data-go="profile">Send me a sign-in link</button>
+        <button class="primary" data-go="sent">Send me a sign-in link</button>
         <div class="fine">We email you a link. Tap it once and this phone stays signed in.
           You will never need a password.</div>
       </div>
     </div>
   </section>
+  <!-- ============ MEMBER · CHECK EMAIL ============ -->
+  <section id="s-sent" class="screen" style="display:none">
+    <div class="landing">
+      <div class="mark">» FIRC Accountability</div>
+      <div class="bigcheck">✓</div>
+      <h2>Check your email</h2>
+      <p>We sent a sign-in link to <b>a.hollis@example.com</b>. Tap it and you are signed in
+        on this phone for good.</p>
+      <div class="card" style="text-align:center">
+        <button class="primary" data-go="profile">Tap the link in the email</button>
+        <button class="ghost" style="width:100%; margin-top:10px">Send it again</button>
+        <div class="fine">Wrong address? <span style="color:var(--accent); cursor:pointer" data-go="join">Start over</span></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 7. MEMBER · PROFILE SETUP ============ -->
   <section id="s-profile" class="screen" style="display:none">
     <div class="formwrap">
@@ -502,10 +546,28 @@ body{padding-bottom:120px}
         <div class="frow numrow"><label>Team registered for convention</label><div class="fld"><span class="was" data-was>was 6</span><input class="num" type="text" inputmode="numeric" data-v="9"></div></div>
       </div>
       <div class="acts">
-        <button class="primary" data-go="board">Save this week</button>
-        <button class="ghost" id="nochange" data-go="board">Nothing changed</button>
+        <button class="primary" data-go="saved">Save this week</button>
+        <button class="ghost" id="nochange" data-go="saved">Nothing changed</button>
       </div>
       <div class="legend" style="text-align:center">You are in 2 rooms. Saving updates both.</div>
+    </div>
+  </section>
+
+  <!-- ============ MEMBER · SAVED ============ -->
+  <section id="s-saved" class="screen" style="display:none">
+    <div class="landing">
+      <div class="bigcheck">✓</div>
+      <h2>Saved for the week of Jul 27</h2>
+      <p>You moved <b>+2 recruits</b> and <b>+$6,100 premium</b> since last Monday.<br>
+        Next one is due Monday, Aug 3 at 8:00 PM CT. We will text you the night before.</p>
+      <div class="card">
+        <div class="frow" style="border:none; padding:0 0 14px"><label>Tuesday RVP Call</label>
+          <span class="pill active">Current</span></div>
+        <div class="frow" style="border:none; padding:0"><label>Wednesday Field Call</label>
+          <span class="pill active">Current</span></div>
+      </div>
+      <div class="fine" style="margin-top:20px; font-size:13px; color:var(--ink3)">
+        Change something? <span style="color:var(--accent); cursor:pointer" data-go="update">Edit this week</span></div>
     </div>
   </section>
 </div>
@@ -520,17 +582,19 @@ body{padding-bottom:120px}
 <script>
 /* ---------- screens ---------- */
 /* ---------- the walkthrough ----------
-   Seven screens in the order the story is told. The prototype's other three
-   (your rooms, check-your-email, your RVP) are cut on purpose: they are real
-   screens, they are just not what makes the point in a two-minute demo. */
+   Told from the seat of the person on the call, in the order it happens to them:
+   the text, the sign-in, who you are, your numbers, done. The board comes last and
+   is the only admin screen \u2014 it answers "where do my numbers go." Room setup is cut;
+   nobody on the call ever sees it. (Zack, 2026-07-27) */
 const SCREENS=[
- ["cover",   "Start",              ""],
- ["newroom", "Setting up the call", "<b>This is the only setup there is.</b> Name the call, say when numbers are due, and pick when the reminders go out. You do this once."],
- ["invites", "The link you send",   "<b>One link for the whole call.</b> Text it to the group. Below it is everyone who has walked through it. Anyone you did not mean to invite comes off in one tap."],
- ["join",    "What they see",       "<b>This is their side.</b> They tap the link, type their email, and get a sign-in link back. No password to make up, no app to install."],
- ["profile", "Filled in once, ever","<b>The one-time part.</b> Name, rep number, level, phone. They never see this screen again."],
- ["update",  "The weekly two minutes","<b>This is the screen they actually live in.</b> Last week\u2019s number sits right beside every box, so it is mostly typing over a number that is already there. \u201cNothing changed\u201d is one tap."],
- ["board",   "What you look at",    "<b>The whole point.</b> Everyone on one screen, sorted however you want, and anybody who has not reported floats to the top no matter what you sort by. Try the tabs and tap a column heading."],
+ ["cover",   "Start",               ""],
+ ["text",    "The text you get",    "<b>This is how it reaches you.</b> One link in the group text. Same link for everybody on the call, and you open it right on your phone."],
+ ["join",    "Tap it, type your email","<b>That is the whole sign-up.</b> No password to make up and no app to download. You type your email and we send you a link back."],
+ ["sent",    "The email arrives",   "<b>Tap the link in the email and you are in.</b> That one tap signs this phone in for good \u2014 you will not do this again."],
+ ["profile", "Who you are, once",   "<b>The only long screen, and you fill it in one time.</b> Name, rep number, level, phone. After tonight you never see it again."],
+ ["update",  "Your numbers, weekly","<b>This is the screen you actually live in.</b> Last week\u2019s number sits right beside every box, so most weeks you are typing over a number that is already there. If nothing moved, that is one tap."],
+ ["saved",   "Done for the week",   "<b>That is it.</b> You see what you moved and when the next one is due. We text you the night before so nobody has to chase you."],
+ ["board",   "Where it lands",      "<b>This is what your leader opens before the call.</b> Everybody on one screen. You only ever see your own numbers \u2014 this board is his side, and it is the reason nobody reads figures out loud any more."],
 ];
 let si=0, grp="p", bstate="normal", ustate="return", lstate="found", sortKey="name", sortDir=1;
 
