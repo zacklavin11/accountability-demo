@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en" data-c="dark" data-d="desktop" data-g="p">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Accountability Tool — Walkthrough</title>
+<meta name="description" content="A seven-screen walkthrough of the weekly production accountability tool.">
+<meta name="robots" content="noindex">
+<style>
+/* ==========================================================
+   LOCKED LOOK — decided over rounds 1-4 with Zack:
+     Focus layout (column groups, 5 at a time) + All view
+     Zebra banding
+     Mix "C": rail on the left edge, flag (dot + last updated)
+       in one column, no status column, and nothing that
+       carries a word ever fades — only empty number cells.
+   Dark and Paper are both first-class. Desktop and Phone
+   are both first-class.
+   ========================================================== */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{background:var(--page)}
+body{background:var(--page); color:var(--ink); font-family:var(--font); font-size:16px;
+     -webkit-font-smoothing:antialiased; padding-bottom:150px; min-height:100vh}
+.stage{padding:26px 20px 40px}
+.app{max-width:1320px; margin:0 auto}
+
+[data-c="dark"]{
+  --page:#0d0f10; --surface:#141718; --zebra:#1b2021; --head:#191d1e; --grouphead:#12181a;
+  --ink:#f4f1e6; --ink2:#bcb8a9; --ink3:#8b877c;
+  --line:#242a2c; --rule:#414849; --hover:#232a2b;
+  --accent:#f0b445; --accent-ink:#0d0f10; --accent-soft:rgba(240,180,69,.25);
+  --good:#5ad48c; --warn:#f0b445; --bad:#ff6d5e;
+  --good-bg:rgba(90,212,140,.12); --warn-bg:rgba(240,180,69,.12); --bad-bg:rgba(255,109,94,.14);
+  --input-bg:#0b0d0e; --seg-bg:#1b2021; --miss-tint:rgba(255,109,94,.06);
+  --banner-bg:rgba(90,212,140,.09); --banner-line:rgba(90,212,140,.3); --banner-ink:#5ad48c;
+  --info-bg:rgba(240,180,69,.08); --shadow:0 24px 60px -30px rgba(0,0,0,.9);
+}
+[data-c="paper"]{
+  --page:#f4f2ec; --surface:#ffffff; --zebra:#f6f4ee; --head:#e9e6dd; --grouphead:#efece3;
+  --ink:#0d0d0d; --ink2:#3a3a3a; --ink3:#67675f;
+  --line:#ded9cd; --rule:#1d1d1d; --hover:#efece2;
+  --accent:#8a5a00; --accent-ink:#ffffff; --accent-soft:rgba(138,90,0,.2);
+  --good:#0a6b3a; --warn:#8a5a00; --bad:#a4160c;
+  --good-bg:rgba(10,107,58,.09); --warn-bg:rgba(138,90,0,.09); --bad-bg:rgba(164,22,12,.08);
+  --input-bg:#fbfaf6; --seg-bg:#ffffff; --miss-tint:rgba(164,22,12,.05);
+  --banner-bg:rgba(10,107,58,.07); --banner-line:#0a6b3a; --banner-ink:#0a6b3a;
+  --info-bg:rgba(138,90,0,.07); --shadow:0 24px 60px -34px rgba(0,0,0,.4);
+}
+:root{--font:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+/* ---------- phone frame ---------- */
+[data-d="phone"] .stage{display:flex; justify-content:center; padding:26px 12px 40px}
+[data-d="phone"] .app{width:402px; max-width:100%; border:10px solid #1a1a1e; border-radius:36px;
+  background:var(--page); box-shadow:0 30px 70px -25px rgba(0,0,0,.7); padding:14px 12px 26px; overflow:hidden}
+.notch{display:none}
+[data-d="phone"] .notch{display:block; width:110px; height:6px; border-radius:99px; background:#2a2a30; margin:0 auto 14px}
+
+/* ---------- shared chrome ---------- */
+.top{padding-bottom:16px; margin-bottom:16px; border-bottom:2px solid var(--rule)}
+.topline{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap}
+.room{font-size:20px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin:0 0 6px}
+.room .car{color:var(--accent)}
+.roomsub{font-size:13.5px; color:var(--ink3); letter-spacing:.04em}
+.tally{display:flex; gap:18px; align-items:baseline; font-size:13.5px; letter-spacing:.04em; color:var(--ink2)}
+.tally b{font-size:22px; font-weight:700; margin-right:5px}
+.t-ok b{color:var(--good)} .t-stale b{color:var(--warn)} .t-miss b{color:var(--bad)}
+.crumb{font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink3);
+  margin:0 0 12px; cursor:pointer}
+.crumb:hover{color:var(--accent)}
+
+/* ---------- group switcher ---------- */
+.groups{display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap; align-items:center}
+.groups button{font-family:var(--font); font-size:14px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; padding:10px 18px; cursor:pointer; color:var(--ink2);
+  background:var(--seg-bg); border:1px solid var(--rule); border-radius:3px}
+.groups button.on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.groups .spacer{flex:1}
+.sortnote{font-size:13px; color:var(--ink3); letter-spacing:.04em}
+
+/* ---------- board ---------- */
+.boardwrap{border:1px solid var(--rule); background:var(--surface); overflow-x:auto}
+table{border-collapse:collapse; width:100%}
+thead th{text-align:right; font-size:13.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+  color:var(--ink3); padding:13px 20px; background:var(--head); white-space:nowrap;
+  border-bottom:2px solid var(--rule)}
+thead th.sortable{cursor:pointer}
+thead th.sortable:hover{color:var(--accent)}
+thead th .car{opacity:0; margin-left:6px}
+thead th.sorted{color:var(--accent)}
+thead th.sorted .car{opacity:1}
+thead tr.grouprow th{text-align:center; color:var(--accent); font-size:12px; letter-spacing:.18em;
+  padding:10px 20px 8px; border-bottom:1px solid var(--line); background:var(--grouphead)}
+thead tr.grouprow th.sp{background:var(--head); border-bottom:1px solid var(--line)}
+th.l,td.l{text-align:left}
+tbody td{padding:18px 20px; border-bottom:1px solid var(--line); font-size:19px; color:var(--ink);
+  white-space:nowrap; text-align:right}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:nth-child(even) td{background:var(--zebra)}      /* ZEBRA */
+tbody tr:hover td{background:var(--hover)}
+.nm{font-weight:700; font-size:19px; letter-spacing:.03em}
+.lvl{font-size:15px; color:var(--ink2); letter-spacing:.03em}
+.when{font-size:15px; color:var(--ink3); letter-spacing:.03em}
+.v{font-variant-numeric:tabular-nums; font-weight:600; font-size:22px}
+.v.z{color:var(--ink3); font-weight:400}
+.dl{display:block; font-size:14px; font-weight:700; margin-top:4px; letter-spacing:.03em}
+.dl.up{color:var(--good)} .dl.flat{color:var(--ink3)}
+.legend{margin-top:14px; font-size:13.5px; color:var(--ink3); letter-spacing:.04em}
+.dot{display:inline-block; width:13px; height:13px; border-radius:50%; margin-right:10px; vertical-align:-1px}
+.dot.ok{background:var(--good)} .dot.stale{background:var(--warn)} .dot.miss{background:var(--bad)}
+
+/* ALL view runs 12 columns at the SAME size as every other view — Zack, 2026-07-27:
+   scrolling sideways is fine, shrinking the type to avoid it is not. The name and
+   the rail stay frozen at the left edge so you never lose whose row you are on. */
+[data-g="all"] .boardwrap{overflow-x:auto}
+[data-g="all"] th.c-who,[data-g="all"] td.c-who{position:sticky; left:0; z-index:2}
+[data-g="all"] thead th.c-who{background:var(--head)}
+[data-g="all"] tbody td.c-who{background:var(--surface)}
+[data-g="all"] tbody tr:nth-child(even) td.c-who{background:var(--zebra)}
+[data-g="all"] tbody tr.r-miss td.c-who{background:#20191a}
+[data-c="paper"][data-g="all"] tbody tr.r-miss td.c-who{background:#f7ecea}
+[data-g="all"] tbody tr:hover td.c-who{background:var(--hover)}
+[data-g="all"] td.c-who::after,[data-g="all"] th.c-who::after{content:""; position:absolute;
+  top:0; right:0; bottom:0; width:1px; background:var(--rule)}
+
+/* --- mix C: rail + flag, empty cells recede, no name ever fades --- */
+tbody td.c-who{border-left:8px solid transparent; padding-left:18px}
+tr.r-ok td.c-who{border-left-color:var(--good)}
+tr.r-stale td.c-who{border-left-color:var(--warn)}
+tr.r-miss td.c-who{border-left-color:var(--bad)}
+tr.r-miss td.c-flag .when{color:var(--bad); font-weight:700}
+tr.r-stale td.c-flag .when{color:var(--warn); font-weight:700}
+tr.r-miss td{background:var(--miss-tint)!important}
+tr.r-miss .v.z{opacity:.4}
+
+/* ---------- generic surfaces ---------- */
+.grp{border:1px solid var(--rule); background:var(--surface); margin:0 0 16px}
+.grp h3{margin:0; font-size:12px; letter-spacing:.18em; text-transform:uppercase; font-weight:700;
+  color:var(--accent); padding:12px 18px; background:var(--grouphead); border-bottom:1px solid var(--line)}
+.frow{display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:14px 18px; border-bottom:1px solid var(--line)}
+.grp .frow:last-child{border-bottom:none}
+.frow label{font-size:17px; letter-spacing:.04em}
+.frow .hint{display:block; font-size:13px; color:var(--ink3); margin-top:3px; letter-spacing:.02em}
+.fld{display:flex; align-items:center; gap:12px}
+.was{font-size:14px; color:var(--ink3); white-space:nowrap}
+input[type=text],select{font-family:var(--font); font-size:19px; font-weight:600; color:var(--ink);
+  background:var(--input-bg); border:1px solid var(--rule); border-radius:0; padding:11px 14px;
+  width:240px; outline:none}
+input.wide,select.wide{width:340px; font-size:17px}
+input.num{font-variant-numeric:tabular-nums; text-align:right; font-size:21px; font-weight:700; width:180px}
+input[type=text]:focus,select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+.acts{display:flex; gap:12px; margin-top:22px; flex-wrap:wrap}
+button.primary{flex:1; min-width:200px; font-family:var(--font); font-size:15px; font-weight:800;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent);
+  border:none; padding:18px 20px; cursor:pointer}
+button.ghost{font-family:var(--font); font-size:15px; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink2); background:transparent; border:1px solid var(--rule);
+  padding:18px 20px; cursor:pointer}
+button.mini{font-family:var(--font); font-size:12.5px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink2); background:var(--seg-bg); border:1px solid var(--rule);
+  padding:8px 13px; cursor:pointer}
+button.mini.go{color:var(--accent-ink); background:var(--accent); border-color:var(--accent)}
+button.mini:hover{border-color:var(--accent); color:var(--accent)}
+button.mini.go:hover{color:var(--accent-ink)}
+.formwrap{max-width:720px; margin:0 auto}
+.fhead{margin:0 0 20px}
+.fhead h2{font-size:20px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin:0 0 6px}
+.fhead p{margin:0; font-size:13.5px; color:var(--ink3); letter-spacing:.04em; line-height:1.6}
+.banner{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  padding:14px 18px; background:var(--banner-bg); border:1px solid var(--banner-line);
+  color:var(--banner-ink); font-size:16px; margin-bottom:20px}
+.info{padding:14px 18px; background:var(--info-bg); border:1px solid var(--accent-soft);
+  color:var(--ink2); font-size:14.5px; line-height:1.65; margin-bottom:18px}
+.info b{color:var(--accent)}
+.firc{display:inline-block; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); padding:3px 8px; margin-left:10px; vertical-align:2px}
+
+/* ---------- rooms list ---------- */
+.rooms{display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px}
+.roomcard{border:1px solid var(--rule); background:var(--surface); padding:20px; cursor:pointer;
+  border-left:8px solid transparent}
+.roomcard:hover{background:var(--hover); border-left-color:var(--accent)}
+.roomcard h3{margin:0 0 6px; font-size:18px; letter-spacing:.05em}
+.roomcard .meta{font-size:13.5px; color:var(--ink3); letter-spacing:.03em; line-height:1.7}
+.roomcard .bar{display:flex; height:10px; margin:16px 0 10px; background:var(--zebra); overflow:hidden}
+.roomcard .bar i{display:block; height:100%}
+.roomcard .bar .b-ok{background:var(--good)} .roomcard .bar .b-stale{background:var(--warn)}
+.roomcard .bar .b-miss{background:var(--bad)}
+.roomcard .counts{display:flex; gap:16px; font-size:13.5px; color:var(--ink2)}
+.roomcard .counts b{font-weight:700; font-size:17px; margin-right:5px}
+.newroom{border:1px dashed var(--rule); background:transparent; display:flex; align-items:center;
+  justify-content:center; min-height:180px; font-size:15px; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; color:var(--ink3); cursor:pointer}
+.newroom:hover{border-color:var(--accent); color:var(--accent)}
+
+/* ---------- invites table ---------- */
+table.mini-t tbody td{font-size:16px; padding:14px 18px}
+table.mini-t .nm{font-size:16px}
+.pill{display:inline-block; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+  padding:5px 10px; border:1px solid currentColor}
+.pill.sent{color:var(--ink3)} .pill.opened{color:var(--warn); background:var(--warn-bg)}
+.pill.active{color:var(--good); background:var(--good-bg)} .pill.pend{color:var(--accent); background:var(--accent-soft)}
+.linkbox{display:flex; gap:10px; align-items:center; margin:0 0 18px; flex-wrap:wrap}
+.linkbox code{flex:1; min-width:240px; background:var(--input-bg); border:1px solid var(--rule);
+  padding:14px 16px; font-size:15px; color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+/* ---------- invite / signin landing ---------- */
+.landing{max-width:520px; margin:40px auto 0; text-align:center}
+.landing .mark{font-size:13px; letter-spacing:.28em; text-transform:uppercase; color:var(--accent); margin-bottom:26px}
+.landing h2{font-size:26px; letter-spacing:.03em; margin:0 0 12px; line-height:1.35}
+.landing p{font-size:16px; color:var(--ink2); line-height:1.7; margin:0 0 26px}
+.landing .card{border:1px solid var(--rule); background:var(--surface); padding:28px 24px; text-align:left}
+.landing input[type=text]{width:100%; text-align:left; font-size:19px; margin-bottom:14px}
+.landing button.primary{width:100%}
+.landing .fine{font-size:13px; color:var(--ink3); line-height:1.7; margin-top:18px; text-align:center}
+.bigcheck{font-size:44px; color:var(--good); margin-bottom:14px}
+
+/* ---------- steps ---------- */
+.steps{display:flex; gap:6px; margin:0 0 22px; font-size:11.5px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:700; color:var(--ink3); flex-wrap:wrap}
+.steps i{font-style:normal; padding:7px 12px; border:1px solid var(--line)}
+.steps i.on{color:var(--accent-ink); background:var(--accent); border-color:var(--accent)}
+.steps i.done{color:var(--good); border-color:var(--good)}
+
+/* ---------- phone board = one card per person ---------- */
+[data-d="phone"] thead{display:none}
+[data-d="phone"] .boardwrap{border:none; background:transparent; overflow:visible}
+[data-d="phone"] table,[data-d="phone"] tbody,[data-d="phone"] tr,[data-d="phone"] td{display:block; width:auto}
+[data-d="phone"] tbody tr{border:1px solid var(--rule); background:var(--surface)!important;
+  margin-bottom:12px; padding:14px; position:relative}
+[data-d="phone"] tbody tr:nth-child(even) td,[data-d="phone"] tbody tr:hover td{background:transparent}
+[data-d="phone"] tbody td{border:none; padding:0; text-align:left; background:transparent!important;
+  white-space:normal}
+[data-d="phone"] td.c-who{padding-right:0; border-left:0; padding-left:0}
+[data-d="phone"] td.c-lvl{display:inline-block; margin-right:14px}
+[data-d="phone"] td.n{display:flex; justify-content:space-between; align-items:baseline;
+  border-top:1px solid var(--line); padding:10px 0 0; margin-top:10px}
+[data-d="phone"] td.n .hl{display:block; font-size:13px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink2); font-weight:700}
+[data-d="phone"] td.n .dl{display:inline; margin-left:8px; font-size:13px}
+[data-d="phone"] td.c-flag{display:block; margin-top:10px; padding-top:9px; border-top:1px solid var(--line)}
+[data-d="phone"] tbody tr.r-miss{background:var(--miss-tint)!important}
+[data-d="phone"] tbody tr.r-miss td{background:transparent!important}
+[data-d="phone"] tbody tr.r-ok{border-left:8px solid var(--good)}
+[data-d="phone"] tbody tr.r-stale{border-left:8px solid var(--warn)}
+[data-d="phone"] tbody tr.r-miss{border-left:8px solid var(--bad)}
+[data-d="phone"] .room{font-size:17px}
+[data-d="phone"] .tally{gap:14px; margin-top:10px}
+[data-d="phone"] input.num{width:108px; font-size:18px; padding:10px 9px}
+[data-d="phone"] input[type=text],[data-d="phone"] select{width:100%}
+[data-d="phone"] .frow{padding:13px 12px; flex-wrap:wrap}
+[data-d="phone"] .frow label{flex:1 1 100%}
+[data-d="phone"] .frow .fld{flex:1 1 100%}
+/* on a phone the number rows go two-line: label, then "was" and the field
+   pushed to opposite edges — one-thumb reach, nothing hanging off the card */
+[data-d="phone"] .frow.numrow label{flex:1 1 100%; margin-bottom:9px}
+[data-d="phone"] .frow.numrow .fld{flex:1 1 100%; justify-content:space-between}
+[data-d="phone"] .frow.numrow input.num{width:140px}
+[data-d="phone"] .acts{flex-direction:column}
+[data-d="phone"] .acts button.primary,[data-d="phone"] .acts button.ghost{min-width:0; width:100%}
+[data-d="phone"] .rooms{grid-template-columns:1fr}
+[data-d="phone"] .landing{margin-top:10px}
+[data-d="phone"] .groups button{padding:9px 12px; font-size:12.5px}
+.hl{display:none}
+[data-d="phone"] .desktoponly{display:none}
+
+/* ---------- demo chrome ----------
+   This file is the walkthrough version: no developer picker, no state
+   switches, seven screens in the order the story is told. Back / Next
+   at the bottom, one plain-English caption at the top. */
+body{padding-bottom:120px}
+#caption{position:sticky; top:0; z-index:40; background:var(--page);
+  border-bottom:1px solid var(--line); padding:14px 20px 13px; margin-bottom:2px}
+.capwrap{max-width:1320px; margin:0 auto; display:flex; align-items:baseline; gap:16px; flex-wrap:wrap}
+.capstep{font-size:11.5px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); white-space:nowrap}
+.captext{font-size:16px; color:var(--ink2); line-height:1.5; letter-spacing:.01em; flex:1; min-width:220px}
+.captext b{color:var(--ink)}
+
+#nav{position:fixed; left:0; right:0; bottom:0; z-index:50; background:var(--page);
+  border-top:2px solid var(--rule); padding:12px 20px calc(12px + env(safe-area-inset-bottom))}
+.navwrap{max-width:1320px; margin:0 auto; display:flex; align-items:center; gap:14px}
+#nav button{font-family:var(--font); font-size:14px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; padding:14px 24px; border-radius:3px; cursor:pointer;
+  border:1px solid var(--rule); background:var(--seg-bg); color:var(--ink2)}
+#nav button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+#nav button.next{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); flex:1}
+#nav button.next:hover{opacity:.9; color:var(--accent-ink)}
+#nav button:disabled{opacity:.3; cursor:default}
+#dots{display:flex; gap:7px; margin:0 4px}
+#dots i{width:9px; height:9px; border-radius:50%; background:var(--rule); cursor:pointer}
+#dots i.on{background:var(--accent)}
+#dots i.done{background:var(--ink3)}
+
+/* ---------- cover ---------- */
+.cover{max-width:640px; margin:6vh auto 0; text-align:left}
+.cover .kick{font-size:12px; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:18px}
+.cover h1{font-size:34px; line-height:1.2; margin:0 0 18px; letter-spacing:.02em}
+.cover p{font-size:17px; line-height:1.7; color:var(--ink2); margin:0 0 26px}
+.cover ol{margin:0 0 30px; padding-left:0; list-style:none; counter-reset:c}
+.cover li{counter-increment:c; position:relative; padding-left:44px; margin-bottom:16px;
+  font-size:16.5px; line-height:1.6; color:var(--ink2)}
+.cover li::before{content:counter(c); position:absolute; left:0; top:-1px; width:28px; height:28px;
+  border:1px solid var(--accent); color:var(--accent); border-radius:50%; text-align:center;
+  line-height:27px; font-size:13px; font-weight:800}
+.cover li b{color:var(--ink)}
+.cover .fineprint{font-size:14px; color:var(--ink3); line-height:1.6; border-top:1px solid var(--line);
+  padding-top:18px}
+
+/* On an actual phone, drop the fake device frame and just be the phone layout. */
+@media(max-width:780px){
+  [data-d="phone"] .app{width:auto; border:none; border-radius:0; box-shadow:none; padding:0}
+  [data-d="phone"] .notch{display:none}
+  [data-d="phone"] .stage{padding:16px 14px 30px}
+  #caption{padding:12px 14px}
+  .captext{font-size:15px}
+  #nav{padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  #nav button{padding:13px 14px; font-size:12.5px}
+  .cover h1{font-size:26px}
+  .cover{margin-top:2vh}
+}
+</style>
+</head>
+<body>
+<div id="caption"><div class="capwrap">
+  <span class="capstep" id="capstep"></span>
+  <span class="captext" id="captext"></span>
+</div></div>
+
+<div class="stage">
+<div class="app">
+  <span class="notch"></span>
+
+  <!-- ============ 0. COVER ============ -->
+  <section id="s-cover" class="screen">
+    <div class="cover">
+      <div class="kick">A walkthrough · seven screens</div>
+      <h1>Everybody&rsquo;s numbers,<br>on one board, before the call.</h1>
+      <p>Nobody reads them out. Nobody chases anybody the night before. You open one
+      screen and the whole team is on it &mdash; including who did not report.</p>
+      <ol>
+        <li><b>You set the room up once.</b> A name and a deadline. Two minutes.</li>
+        <li><b>You get one link.</b> Text it to the group. That is the whole invite.</li>
+        <li><b>They fill in their numbers each week.</b> Twelve boxes, last week&rsquo;s
+        figures already sitting beside them.</li>
+      </ol>
+      <p class="fineprint">Everything you are about to see is a working picture, not the
+      finished product &mdash; the names and numbers are made up. Tap <b>Next</b> to walk
+      through it, or use the dots to jump.</p>
+    </div>
+  </section>
+  <!-- ============ 2. ADMIN · NEW ROOM ============ -->
+  <section id="s-newroom" class="screen" style="display:none">
+    <div class="formwrap">
+      <div class="fhead"><h2>New room</h2><p>Two minutes. You can change any of it later.</p></div>
+      <div class="grp"><h3>The room</h3>
+        <div class="frow"><label>Room name<span class="hint">what you call the meeting</span></label>
+          <div class="fld"><input type="text" value="Tuesday RVP Call"></div></div>
+      </div>
+      <div class="grp"><h3>The deadline</h3>
+        <div class="frow"><label>Numbers are due<span class="hint">anyone who has not saved by then shows as missing</span></label>
+          <div class="fld"><select><option>Monday</option><option>Sunday</option><option>Tuesday</option></select>
+            <select><option>8:00 PM</option><option>6:00 PM</option><option>Noon</option></select></div></div>
+        <div class="frow"><label>Timezone</label>
+          <div class="fld"><select><option>Central (CT)</option><option>Eastern (ET)</option><option>Mountain (MT)</option><option>Pacific (PT)</option></select></div></div>
+        <div class="frow"><label>Reminder<span class="hint">text and email, automatic</span></label>
+          <div class="fld"><select class="wide"><option>A day before + 2 hours before</option><option>A day before only</option><option>No reminders</option></select></div></div>
+      </div>
+      <div class="info">Every room keeps its own deadline. Your Tuesday call and your Wednesday call
+        are separate, so someone can be current in one and late in the other.
+        <br><br>That is the whole setup. The next screen gives you one link. Send it to whoever is on
+        the call. Anyone you did not mean to invite, you remove in one click.</div>
+      <div class="acts"><button class="primary" data-go="invites">Create room and get the link</button>
+        </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. ADMIN · INVITES ============ -->
+  <section id="s-invites" class="screen" style="display:none">
+    <div class="top"><div class="topline">
+      <div><h1 class="room"><span class="car">»</span> Tuesday RVP Call · people</h1>
+        <div class="roomsub">10 in the room · 1 started and did not finish</div></div>
+      <div><button class="mini go" data-go="board">Open the board →</button></div>
+    </div></div>
+
+    <div class="grp"><h3>One link for the whole room</h3>
+      <div style="padding:18px">
+        <div class="linkbox"><code>firc.app/join/tuesday-rvp-4K2P9</code>
+          <button class="mini go">Copy</button><button class="mini">Text it</button><button class="mini">New link</button></div>
+        <div class="legend" style="margin:0">Send this in the group text. Whoever opens it types their email,
+          gets a sign-in link back, and they are in. You never build a list and you never approve anyone.
+          They only see their own numbers, so a forwarded link gives nothing away. Anyone you did not
+          mean to invite, you remove.</div>
+      </div>
+    </div>
+
+    <div class="grp"><h3>Everyone in the room</h3>
+      <table class="mini-t"><tbody id="inviteRows"></tbody></table>
+    </div>
+    <div class="legend">Someone who never opens the link is not on this list. The room has no way to know
+      they exist. If that becomes a problem, email the invite instead of texting it. That button is
+      below.</div>
+    <div class="acts"><button class="primary">Email the invite to a list</button>
+      <button class="ghost">Download the roster</button></div>
+  </section>
+
+  <!-- ============ 4. ADMIN · THE BOARD ============ -->
+  <section id="s-board" class="screen" style="display:none">
+    <div class="top">
+      <div class="topline">
+        <div><h1 class="room"><span class="car">»</span> Tuesday RVP Call</h1>
+          <div class="roomsub">Week of Jul 27 · cutoff Mon 8:00 PM CT · 10 in the room</div></div>
+        <div class="tally" id="tally"></div>
+      </div>
+    </div>
+    <div class="groups" id="groups">
+      <button data-g="all">All</button>
+      <button data-g="p" class="on">Personal</button>
+      <button data-g="t">Team</button>
+      <button data-g="a">Activity</button>
+      <span class="spacer"></span>
+      <span class="sortnote desktoponly">Tap any column to sort</span>
+    </div>
+    <div class="boardwrap"><table><thead id="head"></thead><tbody id="rows"></tbody></table></div>
+    <div class="legend">Sorted by <b id="sortLabel">name</b>. Anyone who has not reported stays at the top,
+      whatever you sort by. The small number underneath is the change since last week.</div>
+  </section>
+
+  <!-- ============ 5. MEMBER · INVITE LANDING ============ -->
+  <section id="s-join" class="screen" style="display:none">
+    <div class="landing">
+      <div class="mark">» FIRC Accountability</div>
+      <h2>John Lavin invited you to<br>Tuesday RVP Call</h2>
+      <p>Numbers are due Mondays by 8:00 PM CT.</p>
+      <div class="card">
+        <label style="display:block; font-size:14px; color:var(--ink2); margin-bottom:9px; letter-spacing:.04em">Your email</label>
+        <input type="text" placeholder="you@example.com">
+        <button class="primary" data-go="profile">Send me a sign-in link</button>
+        <div class="fine">We email you a link. Tap it once and this phone stays signed in.
+          You will never need a password.</div>
+      </div>
+    </div>
+  </section>
+  <!-- ============ 7. MEMBER · PROFILE SETUP ============ -->
+  <section id="s-profile" class="screen" style="display:none">
+    <div class="formwrap">
+      <div class="steps"><i class="done">Email ✓</i><i class="on">About you</i><i>Your numbers</i></div>
+      <div class="fhead"><h2>About you</h2><p>Once. It stays saved — every week after this is just numbers.</p></div>
+      <div class="grp"><h3>You</h3>
+        <div class="frow"><label>Name<span class="hint">as it should read on the board</span></label>
+          <div class="fld"><input type="text" value="Hollis, Ann"></div></div>
+        <div class="frow"><label>Rep ID<span class="hint">5 characters — your solution number</span></label>
+          <div class="fld"><input type="text" value="8W3L1" style="width:140px; letter-spacing:.24em; text-transform:uppercase"></div></div>
+        <div class="frow"><label>Level</label>
+          <div class="fld"><select>
+            <option>Representative</option><option selected>Senior Rep</option><option>District Leader</option>
+            <option>Division Leader</option><option>Regional Leader</option>
+            <option>RVP</option><option>SVP</option><option>NSD</option><option>SNSD</option></select></div></div>
+        <div class="frow"><label>Phone</label>
+          <div class="fld"><input type="text" value="(512) 555-0148"></div></div>
+        <div class="frow"><label>Email<span class="hint">the one you just confirmed</span></label>
+          <div class="fld"><input class="wide" type="text" value="a.hollis@example.com"></div></div>
+        <div class="frow"><label>Photo<span class="hint">optional</span></label>
+          <div class="fld"><button class="mini">Take one</button><button class="mini">Choose a file</button></div></div>
+      </div>
+      <div class="info"><b>This is your FIRC profile.</b> If you already have a FIRC account, we fill this in
+        and you just check it. If you do not, saving this makes you one.</div>
+      <div class="acts"><button class="primary" data-go="update">Save and continue</button></div>
+    </div>
+  </section>
+  <!-- ============ 9. MEMBER · WEEKLY UPDATE ============ -->
+  <section id="s-update" class="screen" style="display:none">
+    <div class="formwrap">
+      <div class="steps" id="ustepsWrap" style="display:none"><i class="done">Email ✓</i><i class="done">About you ✓</i><i class="on">Your numbers</i></div>
+      <div class="fhead"><h2>Your week</h2>
+        <p id="fsub">Month to date · last saved Monday, Jul 20 · due Monday 8:00 PM CT</p></div>
+      <div class="banner" id="banner">
+        <span>Last week you moved <b>+$6,100</b> premium and <b>+2</b> recruits.</span>
+        <span style="opacity:.75">Saved Jul 20</span>
+      </div>
+      <div class="info" id="pendnote" style="display:none">You are in the room and your numbers are
+        saving. The only thing still open is John Lavin adding you to his team. Nothing here waits on
+        that. The day he says yes, these weeks are already attached.</div>
+      <div class="grp"><h3>Personal — month to date</h3>
+        <div class="frow numrow"><label>Recruits</label><div class="fld"><span class="was" data-was>was 1</span><input class="num" type="text" inputmode="numeric" data-v="3"></div></div>
+        <div class="frow numrow"><label>Premium</label><div class="fld"><span class="was" data-was>was $25,100</span><input class="num" type="text" inputmode="numeric" data-v="$31,200"></div></div>
+        <div class="frow numrow"><label>Securities</label><div class="fld"><span class="was" data-was>was $74,000</span><input class="num" type="text" inputmode="numeric" data-v="$88,000"></div></div>
+        <div class="frow numrow"><label>Roth IRA apps</label><div class="fld"><span class="was" data-was>was 4</span><input class="num" type="text" inputmode="numeric" data-v="5"></div></div>
+        <div class="frow numrow"><label>Income to date</label><div class="fld"><span class="was" data-was>was $18,400</span><input class="num" type="text" inputmode="numeric" data-v="$22,900"></div></div>
+      </div>
+      <div class="grp"><h3>Team — month to date</h3>
+        <div class="frow numrow"><label>Team recruits</label><div class="fld"><span class="was" data-was>was 9</span><input class="num" type="text" inputmode="numeric" data-v="14"></div></div>
+        <div class="frow numrow"><label>Team premium</label><div class="fld"><span class="was" data-was>was $186,000</span><input class="num" type="text" inputmode="numeric" data-v="$214,500"></div></div>
+        <div class="frow numrow"><label>Team securities volume</label><div class="fld"><span class="was" data-was>was $402,000</span><input class="num" type="text" inputmode="numeric" data-v="$455,000"></div></div>
+        <div class="frow numrow"><label>Team Roth IRAs</label><div class="fld"><span class="was" data-was>was 11</span><input class="num" type="text" inputmode="numeric" data-v="13"></div></div>
+        <div class="frow numrow"><label>Team cash flow</label><div class="fld"><span class="was" data-was>was $61,000</span><input class="num" type="text" inputmode="numeric" data-v="$70,300"></div></div>
+      </div>
+      <div class="grp"><h3>Activity</h3>
+        <div class="frow numrow"><label>Appointments booked<span class="hint">next 7 days</span></label><div class="fld"><span class="was" data-was>was 8</span><input class="num" type="text" inputmode="numeric" data-v="11"></div></div>
+        <div class="frow numrow"><label>Team registered for convention</label><div class="fld"><span class="was" data-was>was 6</span><input class="num" type="text" inputmode="numeric" data-v="9"></div></div>
+      </div>
+      <div class="acts">
+        <button class="primary" data-go="board">Save this week</button>
+        <button class="ghost" id="nochange" data-go="board">Nothing changed</button>
+      </div>
+      <div class="legend" style="text-align:center">You are in 2 rooms. Saving updates both.</div>
+    </div>
+  </section>
+</div>
+</div>
+
+<div id="nav"><div class="navwrap">
+  <button id="back">&larr; Back</button>
+  <div id="dots"></div>
+  <button class="next" id="next">Next &rarr;</button>
+</div></div>
+
+<script>
+/* ---------- screens ---------- */
+/* ---------- the walkthrough ----------
+   Seven screens in the order the story is told. The prototype's other three
+   (your rooms, check-your-email, your RVP) are cut on purpose: they are real
+   screens, they are just not what makes the point in a two-minute demo. */
+const SCREENS=[
+ ["cover",   "Start",              ""],
+ ["newroom", "Setting up the call", "<b>This is the only setup there is.</b> Name the call, say when numbers are due, and pick when the reminders go out. You do this once."],
+ ["invites", "The link you send",   "<b>One link for the whole call.</b> Text it to the group. Below it is everyone who has walked through it. Anyone you did not mean to invite comes off in one tap."],
+ ["join",    "What they see",       "<b>This is their side.</b> They tap the link, type their email, and get a sign-in link back. No password to make up, no app to install."],
+ ["profile", "Filled in once, ever","<b>The one-time part.</b> Name, rep number, level, phone. They never see this screen again."],
+ ["update",  "The weekly two minutes","<b>This is the screen they actually live in.</b> Last week\u2019s number sits right beside every box, so it is mostly typing over a number that is already there. \u201cNothing changed\u201d is one tap."],
+ ["board",   "What you look at",    "<b>The whole point.</b> Everyone on one screen, sorted however you want, and anybody who has not reported floats to the top no matter what you sort by. Try the tabs and tap a column heading."],
+];
+let si=0, grp="p", bstate="normal", ustate="return", lstate="found", sortKey="name", sortDir=1;
+
+/* ---------- data ----------
+   Only people who actually joined are here. Somebody who never opened the link is
+   not a row — the room has no way to know they exist (Zack, 2026-07-27). */
+const P = [
+ ["miss","Okafor, S.","District Leader",[["1","0"],["$7,400","+400"],["$19,500",null],["1",null],["$5,600",null]],
+   [["3",null],["$44,000",null],["$77,000",null],["4",null],["$12,800",null]],[["4",null],["2",null]],"2 wks ago"],
+ ["stale","Brooks, T.","Representative",[["1",null],["$8,400",null],["$12,000",null],["2",null],["$6,300",null]],
+   [["0",null],["$0",null],["$0",null],["0",null],["$0",null]],[["4",null],["0",null]],"9 days ago"],
+ ["stale","Nguyen, L.","Division Leader",[["2",null],["$14,900",null],["$31,000",null],["1",null],["$10,700",null]],
+   [["4",null],["$61,000",null],["$104,000",null],["5",null],["$19,400",null]],[["6",null],["3",null]],"8 days ago"],
+ ["ok","Danner, M.","RVP",[["3","+2"],["$31,200","+6.1k"],["$88,000","+14k"],["5","+1"],["$22,900","+4.5k"]],
+   [["14","+5"],["$214,500","+28k"],["$455,000","+53k"],["13","+2"],["$70,300","+9.3k"]],[["11","+3"],["9","+3"]],"yesterday"],
+ ["ok","Ellis, J.","Representative",[["0","0"],["$4,100","0"],["$9,000","0"],["1","0"],["$3,200","0"]],
+   [["0","0"],["$0","0"],["$0","0"],["0","0"],["$0","0"]],[["2","0"],["0","0"]],"today"],
+ ["ok","Foster, K.","Regional Leader",[["4","+1"],["$27,800","+3.4k"],["$61,000","+9k"],["3","+1"],["$19,100","+2.8k"]],
+   [["9","+2"],["$128,000","+14k"],["$266,000","+31k"],["8","+1"],["$41,600","+5.1k"]],[["9","+2"],["6","+2"]],"today"],
+ ["ok","Grady, P.","SVP",[["6","+3"],["$52,400","+11.2k"],["$140,000","+22k"],["8","+2"],["$38,700","+8.1k"]],
+   [["31","+9"],["$486,000","+61k"],["$1,020,000","+140k"],["27","+6"],["$158,200","+21k"]],[["14","+4"],["22","+7"]],"yesterday"],
+ ["ok","Hollis, A.","Senior Rep",[["1","+1"],["$9,600","+2.1k"],["$18,000","+4k"],["2","0"],["$7,400","+1.5k"]],
+   [["1","+1"],["$12,300","+3k"],["$21,000","+5k"],["1","0"],["$3,900","+900"]],[["5","+1"],["2","+1"]],"2 days ago"],
+ ["ok","Ibarra, C.","District Leader",[["2","0"],["$16,300","+900"],["$34,000","+2k"],["2","0"],["$11,800","+600"]],
+   [["5","0"],["$68,000","+3k"],["$141,000","+8k"],["6","+1"],["$22,400","+1.1k"]],[["7","0"],["4","+1"]],"today"],
+ ["ok","Judd, R.","Division Leader",[["3","+2"],["$22,050","+5.0k"],["$47,500","+11k"],["4","+1"],["$15,900","+3.3k"]],
+   [["7","+3"],["$94,500","+19k"],["$198,000","+38k"],["9","+2"],["$33,100","+6.4k"]],[["8","+2"],["5","+2"]],"today"],
+];
+const LADDER=["Representative","Senior Rep","District Leader","Division Leader","Regional Leader",
+              "RVP","SVP","NSD","SNSD"];
+const HEADS={p:["Recruits","Premium","Securities","Roth","Income"],
+             t:["Team recruits","Team premium","Team securities","Team Roth","Team cash flow"],
+             a:["Appts 7d","Convention"]};
+const HEADS_ALL=["Recruits","Premium","Securities","Roth","Income",
+                 "Recruits","Premium","Securities","Roth","Cash flow","Appts 7d","Convention"];
+const GNAME={p:"Personal — month to date",t:"Team — month to date",a:"Activity"};
+const IDX={p:3,t:4,a:5};
+const AGE={"today":0,"yesterday":1,"2 days ago":2,"8 days ago":8,"9 days ago":9,
+           "2 wks ago":14,"3 wks ago":21,"never":999};
+
+/* ---------- board ---------- */
+function cols(){ return grp==="all" ? HEADS_ALL : HEADS[grp]; }
+function valsOf(p){ return grp==="all" ? p[3].concat(p[4],p[5]) : p[IDX[grp]]; }
+function numCell(pair, head){
+  if(!pair) return `<td class="n"><span class="hl">${head}</span><span class="v z">—</span></td>`;
+  const [v,d]=pair;
+  const dl=(d===null||d===undefined)?"":`<span class="dl ${d==="0"?"flat":"up"}">${d==="0"?"—":d}</span>`;
+  return `<td class="n"><span class="hl">${head}</span><span class="v">${v}</span>${dl}</td>`;
+}
+function headHTML(){
+  const c=cols();
+  const all=grp==="all";
+  const grouprow = all
+    ? `<tr class="grouprow"><th class="sp c-who"></th><th class="sp"></th>
+        <th colspan="5">Personal</th><th colspan="5">Team</th><th colspan="2">Activity</th>
+        <th class="sp"></th></tr>`
+    : `<tr class="grouprow"><th class="sp c-who"></th><th class="sp"></th>
+        <th colspan="${c.length}">${GNAME[grp]}</th><th class="sp"></th></tr>`;
+  const sortMark=k=>sortKey===k?" sorted":"";
+  const car=k=>sortKey===k?(sortDir>0?"▲":"▼"):"▲";
+  return grouprow+`<tr>
+    <th class="l c-who sortable${sortMark("name")}" data-sort="name">Name<span class="car">${car("name")}</span></th>
+    <th class="l sortable${sortMark("level")}" data-sort="level">Level<span class="car">${car("level")}</span></th>
+    ${c.map((h,i)=>`<th class="sortable${sortMark("c"+i)}" data-sort="c${i}">${h}<span class="car">${car("c"+i)}</span></th>`).join("")}
+    <th class="l sortable${sortMark("updated")}" data-sort="updated">Updated<span class="car">${car("updated")}</span></th></tr>`;
+}
+function rowHTML(p, st){
+  const blank = st==="miss";
+  const c=cols(), vals=valsOf(p);
+  const cells=c.map((h,i)=>numCell(blank?null:vals[i],h)).join("");
+  const upd = bstate==="allgood" ? "today" : p[p.length-1];
+  return `<tr class="r-${st}">
+    <td class="l c-who"><span class="nm">${p[1]}</span></td>
+    <td class="l c-lvl"><span class="lvl">${p[2]}</span></td>
+    ${cells}
+    <td class="l c-flag"><span class="dot ${st}"></span><span class="when">${upd}</span></td>
+  </tr>`;
+}
+function toNum(s){ return s===null||s===undefined ? -1 : +String(s).replace(/[^0-9.]/g,"")||0; }
+function sortedPeople(){
+  const list=P.slice();
+  list.sort((a,b)=>{
+    /* people who have not reported always float to the top — the whole point of the board */
+    const la=(bstate==="allgood"?"ok":a[0])!=="ok", lb=(bstate==="allgood"?"ok":b[0])!=="ok";
+    if(la!==lb) return la?-1:1;
+    let r=0;
+    if(sortKey==="name") r=a[1].localeCompare(b[1]);
+    else if(sortKey==="level") r=LADDER.indexOf(a[2])-LADDER.indexOf(b[2]);
+    else if(sortKey==="updated") r=(AGE[a[a.length-1]]??500)-(AGE[b[b.length-1]]??500);
+    else { const i=+sortKey.slice(1); r=toNum(valsOf(a)[i]&&valsOf(a)[i][0])-toNum(valsOf(b)[i]&&valsOf(b)[i][0]); }
+    return r*sortDir || a[1].localeCompare(b[1]);
+  });
+  return list;
+}
+const SORTNAME={name:"name",level:"level",updated:"how long since they reported"};
+/* All view repeats "premium"/"recruits" across the personal and team blocks —
+   say which block the sort came from so the caption is never ambiguous */
+function colLabel(i){
+  const h=cols()[i].toLowerCase();
+  if(grp!=="all") return h;
+  return (i<5?"personal ":i<10?"team ":"")+h;
+}
+function renderBoard(){
+  document.documentElement.dataset.g=grp;
+  document.getElementById("head").innerHTML=headHTML();
+  document.getElementById("rows").innerHTML=
+    sortedPeople().map(p=>rowHTML(p, bstate==="allgood"?"ok":p[0])).join("");
+  const c={ok:0,stale:0,miss:0}; P.forEach(p=>c[bstate==="allgood"?"ok":p[0]]++);
+  document.getElementById("tally").innerHTML=
+    `<span class="t-ok"><b>${c.ok}</b>current</span>`+
+    (c.stale?`<span class="t-stale"><b>${c.stale}</b>stale</span>`:"")+
+    (c.miss?`<span class="t-miss"><b>${c.miss}</b>missing</span>`:"");
+  document.getElementById("sortLabel").textContent=
+    SORTNAME[sortKey] || colLabel(+sortKey.slice(1))+(sortDir>0?" (low first)":" (high first)");
+  document.querySelectorAll("#head th.sortable").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.sort;
+    if(k===sortKey) sortDir*=-1; else { sortKey=k; sortDir = (k==="name"||k==="level")?1:-1; }
+    renderBoard();});
+}
+
+/* ---------- invites ---------- */
+/* No expected roster any more (Zack, 2026-07-27): the link is the whole invite, so
+   the room only knows the people who actually walked through it. "Half done" is the
+   one partial state that is still knowable — they confirmed an email and stopped
+   before the profile. */
+const INV=[
+ ["Brooks, T.","t.brooks@example.com","active","joined Jul 9"],
+ ["Chen, D.","d.chen@example.com","opened","confirmed their email, never finished the profile"],
+ ["Danner, M.","m.danner@example.com","active","joined Jul 8"],
+ ["Ellis, J.","j.ellis@example.com","active","joined Jul 8"],
+ ["Foster, K.","k.foster@example.com","active","joined Jul 9"],
+ ["Grady, P.","p.grady@example.com","active","joined Jul 8"],
+ ["Hollis, A.","a.hollis@example.com","active","joined Jul 9"],
+ ["Ibarra, C.","c.ibarra@example.com","active","joined Jul 10"],
+ ["Judd, R.","r.judd@example.com","active","joined Jul 8"],
+ ["Nguyen, L.","l.nguyen@example.com","active","joined Jul 10"],
+ ["Okafor, S.","s.okafor@example.com","active","joined Jul 9"],
+];
+const PILL={active:"In the room",opened:"Half done"};
+function renderInvites(){
+  document.getElementById("inviteRows").innerHTML=INV.map(([n,e,s,w])=>
+   `<tr><td class="l"><span class="nm">${n}</span></td>
+     <td class="l"><span class="lvl">${e}</span></td>
+     <td class="l"><span class="pill ${s}">${PILL[s]}</span></td>
+     <td class="l"><span class="when">${w}</span></td>
+     <td>${s==="active"?"":'<button class="mini">Nudge them</button> '}<button class="mini">Remove</button></td></tr>`
+  ).join("");
+}
+
+/* ---------- member update states ---------- */
+function applyUpdateState(){
+  const first=ustate!=="return";
+  document.getElementById("banner").style.display=first?"none":"flex";
+  document.getElementById("ustepsWrap").style.display=first?"flex":"none";
+  document.getElementById("pendnote").style.display=ustate==="pending"?"block":"none";
+  document.getElementById("fsub").textContent=first
+    ?"Month to date · your first week — nothing to prefill"
+    :"Month to date · last saved Monday, Jul 20 · due Monday 8:00 PM CT";
+  document.querySelectorAll("#s-update input").forEach(i=>{
+    i.value=first?"":i.dataset.v; i.placeholder=first?"0":"";});
+  document.querySelectorAll("[data-was]").forEach(w=>w.style.display=first?"none":"");
+  document.getElementById("nochange").style.display=first?"none":"";
+}
+
+/* ---------- navigation ---------- */
+function renderChrome(){
+  const [key,label,cap]=SCREENS[si];
+  const cover = key==="cover";
+  document.getElementById("caption").style.display=cover?"none":"";
+  document.getElementById("capstep").textContent=cover?"":`Step ${si} of ${SCREENS.length-1} \u00b7 ${label}`;
+  document.getElementById("captext").innerHTML=cap;
+  document.getElementById("back").disabled=si===0;
+  const last=si===SCREENS.length-1;
+  document.getElementById("next").textContent=cover?"Start \u2192":last?"Start over":"Next \u2192";
+  document.getElementById("dots").innerHTML=SCREENS.map((_,i)=>
+    `<i class="${i===si?"on":i<si?"done":""}" data-jump="${i}" title="${SCREENS[i][1]}"></i>`).join("");
+}
+function show(i){
+  si=(i+SCREENS.length)%SCREENS.length;
+  const key=SCREENS[si][0];
+  document.querySelectorAll(".screen").forEach(s=>s.style.display="none");
+  document.getElementById("s-"+key).style.display="";
+  if(key==="board") renderBoard();
+  if(key==="invites") renderInvites();
+  if(key==="update") applyUpdateState();
+  renderChrome();
+  history.replaceState(null,"","?screen="+key);
+  window.scrollTo(0,0);
+}
+function goto(key){ const i=SCREENS.findIndex(s=>s[0]===key); if(i>=0) show(i); }
+
+document.body.addEventListener("click",e=>{
+  const t=e.target.closest("[data-go]"); if(t){ goto(t.dataset.go); }
+});
+document.getElementById("next").onclick=()=>show(si+1);
+document.getElementById("back").onclick=()=>show(si-1);
+document.getElementById("dots").onclick=e=>{
+  const d=e.target.dataset&&e.target.dataset.jump; if(d!==undefined) show(+d);};
+document.getElementById("groups").onclick=e=>{
+  const g=e.target.dataset&&e.target.dataset.g; if(!g)return; grp=g;
+  document.querySelectorAll("#groups button").forEach(b=>b.classList.toggle("on",b.dataset.g===grp));
+  renderBoard();};
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT")return;
+  if(e.key==="ArrowRight")show(si+1); if(e.key==="ArrowLeft")show(si-1);});
+
+/* A real phone gets the phone layout, not a shrunken desktop table. The device
+   frame is dropped at the same width so it reads as the app, not a picture of it. */
+function fitDevice(){
+  const phone=window.innerWidth<780;
+  document.documentElement.dataset.d=phone?"phone":"desktop";
+  if(phone&&grp==="all"){ grp="p";
+    document.querySelectorAll("#groups button").forEach(x=>x.classList.toggle("on",x.dataset.g==="p")); }
+  document.querySelectorAll("#groups button[data-g=all]").forEach(b=>b.style.display=phone?"none":"");
+}
+window.addEventListener("resize",()=>{const g=grp; fitDevice();
+  if(SCREENS[si][0]==="board"&&g!==grp) renderBoard();});
+
+(function(){
+  fitDevice();
+  const q=new URLSearchParams(location.search);
+  const k=q.get("screen"); const i=k?SCREENS.findIndex(s=>s[0]===k):0;
+  show(i>=0?i:0);
+})();
+</script>
+</body>
+</html>
