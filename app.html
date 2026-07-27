@@ -661,10 +661,14 @@ function headHTML(){
     ${c.map((h,i)=>`<th class="sortable${sortMark("c"+i)}" data-sort="c${i}">${h}<span class="car">${car("c"+i)}</span></th>`).join("")}
     <th class="l sortable${sortMark("updated")}" data-sort="updated">Updated<span class="car">${car("updated")}</span></th></tr>`;
 }
+/* The phone shows one card per person with the column name beside each number.
+   In the All view "Recruits" and "Premium" each appear twice, so the card says
+   which block they came from. Desktop hides these labels (.hl) entirely. */
+function cellLabel(i,h){ return grp==="all" ? (i<5?"Personal ":i<10?"Team ":"")+h : h; }
 function rowHTML(p, st){
   const blank = st==="miss";
   const c=cols(), vals=valsOf(p);
-  const cells=c.map((h,i)=>numCell(blank?null:vals[i],h)).join("");
+  const cells=c.map((h,i)=>numCell(blank?null:vals[i],cellLabel(i,h))).join("");
   const upd = bstate==="allgood" ? "today" : p[p.length-1];
   return `<tr class="r-${st}">
     <td class="l c-who"><span class="nm">${p[1]}</span></td>
@@ -805,9 +809,6 @@ document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT"||e.target.
 function fitDevice(){
   const phone=window.innerWidth<780;
   document.documentElement.dataset.d=phone?"phone":"desktop";
-  if(phone&&grp==="all"){ grp="p";
-    document.querySelectorAll("#groups button").forEach(x=>x.classList.toggle("on",x.dataset.g==="p")); }
-  document.querySelectorAll("#groups button[data-g=all]").forEach(b=>b.style.display=phone?"none":"");
 }
 window.addEventListener("resize",()=>{const g=grp; fitDevice();
   if(SCREENS[si][0]==="board"&&g!==grp) renderBoard();});
